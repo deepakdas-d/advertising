@@ -1,5 +1,6 @@
 import 'package:advertising/authwrapper.dart';
 import 'package:advertising/binding.dart';
+import 'package:advertising/view/gallery.dart';
 import 'package:advertising/view/home.dart';
 import 'package:advertising/view/profile.dart';
 import 'package:advertising/view/signin.dart';
@@ -42,6 +43,11 @@ class MyApp extends StatelessWidget {
           name: '/profile',
           page: () => Profile(),
           binding: ProfileBinding(),
+        ),
+        GetPage(
+          name: '/gallery',
+          page: () => Gallery(),
+          binding: GalleryBinding(),
         ),
       ],
     );

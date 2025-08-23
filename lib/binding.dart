@@ -1,3 +1,4 @@
+import 'package:advertising/controller/gallery_controller.dart';
 import 'package:advertising/controller/home_controller.dart';
 import 'package:advertising/controller/profile_controller.dart';
 import 'package:advertising/controller/signin_controller.dart';
@@ -30,9 +31,17 @@ class HomeBinding extends Bindings {
   }
 }
 
+//profile Binding
 class ProfileBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<ProfileController>(() => ProfileController());
+  }
+}
+
+class GalleryBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<GalleryController>(() => GalleryController());
   }
 }

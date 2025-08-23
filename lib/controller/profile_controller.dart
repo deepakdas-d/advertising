@@ -66,6 +66,35 @@ class ProfileController extends GetxController {
     }
   }
 
+  //fetch  username.
+  String get firstName {
+    final name = profile['username'] ?? '';
+    return name.toString();
+  }
+
+  //Fetch Image
+  String get image {
+    final name = profile['profile_image'] ?? '';
+    return name.toString();
+  }
+
+  //Fetch Email
+
+  String get email {
+    final name = profile['email'] ?? '';
+    return name.toString();
+  }
+
+  String get phone {
+    final name = profile['phone'] ?? '';
+    return name.toString();
+  }
+
+  String get logo {
+    final name = profile['logo'] ?? '';
+    return name.toString();
+  }
+
   Future<void> updateProfile({File? profileImage, File? logo}) async {
     try {
       isLoading(true);

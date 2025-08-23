@@ -34,6 +34,13 @@ class Signin extends StatelessWidget {
                       child: const Text("Signin"),
                     ),
             ),
+            SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                Get.toNamed('/signup');
+              },
+              child: Text("Sign up"),
+            ),
           ],
         ),
       ),

@@ -1,28 +1,25 @@
 import 'dart:convert';
-
 import 'package:advertising/model/image_model.dart';
-import 'package:advertising/view/signin.dart' show Signin;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class HomeController extends GetxController {
-  String? accessToken;
-  String? refreshToken;
-
-  var imagesByCategory = <String, List<ImageModel>>{}.obs;
+class GalleryController extends GetxController {
   var isLoading = true.obs;
-
-  var page = 1;
-  var hasMore = true.obs;
   var isLoadingMore = false.obs;
+  var hasMore = true.obs;
+  int page = 1;
+
+  var selectedCategory = 'All'.obs;
 
   @override
   void onInit() {
     super.onInit();
-    fetchImages();
+    fetchImages(); // fetch images when controller is initialized
   }
+
+  // Map<CategoryName, List<Images>>
+  var imagesByCategory = <String, List<ImageModel>>{}.obs;
 
   Future<void> fetchImages({bool loadMore = false}) async {
     try {
@@ -34,30 +31,25 @@ class HomeController extends GetxController {
         isLoading.value = true;
         page = 1;
         hasMore.value = true;
-        imagesByCategory.clear(); // ✅ clear old data
+        imagesByCategory.clear();
       }
 
       final baseUrl = dotenv.env['BASE_URL'] ?? '';
-      final profileEndpoint = dotenv.env['IMAGE_ENDPOINT'];
-      final url = Uri.parse("$baseUrl$profileEndpoint?page=$page&limit=20");
+      final endpoint = dotenv.env['IMAGE_ENDPOINT'] ?? '';
+      final url = Uri.parse("$baseUrl$endpoint?page=$page&limit=20");
 
       final response = await http.get(url);
       if (response.statusCode == 200) {
         List data = jsonDecode(response.body);
-        if (data.isEmpty) {
-          hasMore.value = false;
-        }
+        if (data.isEmpty) hasMore.value = false;
 
         List<ImageModel> images = data
             .map((e) => ImageModel.fromJson(e))
             .toList();
 
-        // ✅ group without duplicates
         for (var img in images) {
           final list = imagesByCategory.putIfAbsent(img.categoryName, () => []);
-          if (!list.any((e) => e.id == img.id)) {
-            list.add(img);
-          }
+          if (!list.any((e) => e.id == img.id)) list.add(img);
         }
 
         imagesByCategory.refresh();
@@ -68,16 +60,5 @@ class HomeController extends GetxController {
       isLoading.value = false;
       isLoadingMore.value = false;
     }
-  }
-
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    await prefs.remove('refresh_token');
-    accessToken = null;
-    refreshToken = null;
-    Get.offAll(() => Signin());
-
-    Get.snackbar("Logged Out", "You have been logged out successfully");
   }
 }

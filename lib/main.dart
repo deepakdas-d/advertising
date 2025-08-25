@@ -5,6 +5,7 @@ import 'package:advertising/view/home.dart';
 import 'package:advertising/view/profile.dart';
 import 'package:advertising/view/signin.dart';
 import 'package:advertising/view/signup.dart';
+import 'package:advertising/view/video_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
@@ -48,6 +49,11 @@ class MyApp extends StatelessWidget {
           name: '/gallery',
           page: () => Gallery(),
           binding: GalleryBinding(),
+        ),
+        GetPage(
+          name: '/videolist',
+          page: () => VideoList(),
+          binding: VideoListBinding(),
         ),
       ],
     );

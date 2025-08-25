@@ -13,7 +13,8 @@ class HomeController extends GetxController {
 
   var imagesByCategory = <String, List<ImageModel>>{}.obs;
   var isLoading = true.obs;
-
+  var errorMessage = RxnString();
+  var imageUrls = <String>[].obs;
   var page = 1;
   var hasMore = true.obs;
   var isLoadingMore = false.obs;
@@ -22,6 +23,7 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     fetchImages();
+    fetchCarouselImages();
   }
 
   Future<void> fetchImages({bool loadMore = false}) async {
@@ -67,6 +69,36 @@ class HomeController extends GetxController {
     } finally {
       isLoading.value = false;
       isLoadingMore.value = false;
+    }
+  }
+
+  //CAROUSEL IMAGE VIEW
+  Future<void> fetchCarouselImages() async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = null;
+      final baseUrl = dotenv.env['BASE_URL'] ?? '';
+      final carouselEndpoint = dotenv.env['CAROUSEL_ENDPOINT'];
+      final url = Uri.parse("$baseUrl$carouselEndpoint/1/");
+
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        imageUrls.value = [
+          data['image1'],
+          data['image2'],
+          data['image3'],
+          data['image4'],
+        ].where((url) => url != null).map((url) => url.toString()).toList();
+      } else {
+        errorMessage.value = "Failed to load images";
+      }
+    } catch (e) {
+      errorMessage.value = "Error: $e";
+    } finally {
+      isLoading.value = false;
     }
   }
 

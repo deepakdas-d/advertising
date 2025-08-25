@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:advertising/controller/home_controller.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:carousel_slider/carousel_slider.dart';
 
 class Home extends StatelessWidget {
   Home({super.key});
@@ -75,6 +76,8 @@ class Home extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(12),
             children: [
+              buildCarousel(context),
+
               // ✅ show welcome section at the top
               buildWelcomeSection(context),
               const SizedBox(height: 20),
@@ -239,13 +242,6 @@ class Home extends StatelessWidget {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_album),
-            title: const Text("Gallery"),
-            onTap: () {
-              Get.toNamed('/gallery');
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.person),
             title: const Text("Profile"),
             onTap: () {
@@ -254,11 +250,19 @@ class Home extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text("Settings"),
+            leading: const Icon(Icons.photo_album),
+            title: const Text("Gallery"),
+            onTap: () {
+              Get.toNamed('/gallery');
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.video_collection_rounded),
+            title: const Text("Videos"),
             onTap: () {
               Get.back();
-              Get.toNamed('/settings'); // add your route
+              Get.toNamed('/videolist'); // add your route
             },
           ),
           const Divider(),
@@ -273,5 +277,70 @@ class Home extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  //carousal
+  Widget buildCarousel(BuildContext context) {
+    return Obx(() {
+      if (controller.imageUrls.isEmpty &&
+          controller.errorMessage.value == null) {
+        // Loading state
+        return Container(
+          height: 210,
+          color: Colors.grey[200],
+          child: const Center(
+            child: CircularProgressIndicator(color: Colors.teal),
+          ),
+        );
+      }
+
+      if (controller.errorMessage.value != null ||
+          controller.imageUrls.isEmpty) {
+        // Error or empty state
+        return Container(
+          height: 220,
+          color: Colors.grey[200],
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.image_not_supported,
+                  color: Colors.grey,
+                  size: 48,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  controller.errorMessage.value ?? 'No images available',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // ✅ Carousel with auto-scrolling + swipe
+      return CarouselSlider(
+        options: CarouselOptions(
+          height: 220,
+          autoPlay: true,
+          enlargeCenterPage: true,
+          viewportFraction: 0.9,
+          aspectRatio: 16 / 9,
+          autoPlayInterval: const Duration(seconds: 3),
+        ),
+        items: controller.imageUrls.map((url) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+            ),
+          );
+        }).toList(),
+      );
+    });
   }
 }

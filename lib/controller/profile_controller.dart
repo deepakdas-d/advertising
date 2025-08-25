@@ -50,6 +50,7 @@ class ProfileController extends GetxController {
         usernameController.text = profile['username']?.toString() ?? '';
         emailController.text = profile['email']?.toString() ?? '';
         phoneController.text = profile['phone']?.toString() ?? '';
+        log("DEBUG: profile = $profile"); // log the profile data
       } else if (response.statusCode == 401) {
         await prefs.remove('access_token');
         await prefs.remove('refresh_token');
@@ -138,7 +139,7 @@ class ProfileController extends GetxController {
 
         Get.snackbar('Success', 'Profile updated successfully');
       } else {
-        print("DEBUG: ${response.statusCode} => $responseBody");
+        log("DEBUG: ${response.statusCode} => $responseBody");
         Get.snackbar('Error', 'Failed to update profile');
       }
     } catch (e) {

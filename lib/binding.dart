@@ -1,8 +1,10 @@
 import 'package:advertising/controller/gallery_controller.dart';
 import 'package:advertising/controller/home_controller.dart';
+import 'package:advertising/controller/poster_controller.dart';
 import 'package:advertising/controller/profile_controller.dart';
 import 'package:advertising/controller/signin_controller.dart';
 import 'package:advertising/controller/signup_controller.dart';
+import 'package:advertising/controller/video_list_controller.dart';
 import 'package:get/get.dart';
 
 //SignUP binding
@@ -43,5 +45,19 @@ class GalleryBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<GalleryController>(() => GalleryController());
+  }
+}
+
+class PosterBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<PosterController>(() => PosterController());
+  }
+}
+
+class VideoListBinding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<VideoListController>(() => VideoListController());
   }
 }

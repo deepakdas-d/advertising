@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:advertising/controller/poster_controller.dart';
 import 'package:advertising/controller/profile_controller.dart';
 import 'package:advertising/model/image_model.dart';
@@ -248,6 +250,10 @@ class Poster extends StatelessWidget {
                 onPressed: controller.isLoadingForButton.value
                     ? null
                     : () async {
+                        if (!(await controller.isSubscribed())) {
+                          _showSubscribeDialog(context, controller);
+                          return;
+                        }
                         controller.setLoadingForButton(true);
                         await controller.captureAndSaveImage(
                           image.id.toString(),
@@ -270,17 +276,89 @@ class Poster extends StatelessWidget {
                 style: TextButton.styleFrom(
                   backgroundColor: controller.backgroundColor.value,
                 ),
-                onPressed: () => controller.shareImage(
-                  image.id.toString(),
-                  image.imageUrl,
-                  cardKey,
-                  context,
-                ),
+                onPressed: () async {
+                  if (!(await controller.isSubscribed())) {
+                    _showSubscribeDialog(context, controller);
+                    return;
+                  }
+                  await controller.shareImage(
+                    image.id.toString(),
+                    image.imageUrl,
+                    cardKey,
+                    context,
+                  );
+                },
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Show subscription dialog with WhatsApp button
+  Future<void> _showSubscribeDialog(
+    BuildContext context,
+    PosterController controller,
+  ) async {
+    // check subscription before showing UI
+    bool subscribed = await controller.isSubscribed();
+    log("value that return is $subscribed");
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock, size: 40, color: Colors.red),
+              const SizedBox(height: 10),
+              const Text(
+                "Subscription Required",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subscribed
+                    ? "Your subscription has expired. Renew to continue using downloads and sharing."
+                    : "Please subscribe to unlock downloads and sharing.",
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.call, color: Colors.white),
+                label: Text(
+                  subscribed ? "Renew via WhatsApp" : "Subscribe via WhatsApp",
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  controller.redirectToWhatsApp(
+                    "Premium Plan",
+                    199, // make this dynamic if needed
+                    "1 Month",
+                    context,
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

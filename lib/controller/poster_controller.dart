@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
@@ -5,23 +6,59 @@ import 'dart:ui';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'profile_controller.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PosterController extends GetxController {
   var isLoading = true.obs;
   var isLoadingForButton = false.obs;
   var backgroundColor = Colors.teal.obs;
-
+  late bool subscribed;
   final ProfileController profileController = Get.find<ProfileController>();
-
   @override
   void onInit() {
     super.onInit();
     _loadImage();
+    fetchSubscriptionDetails();
+    isSubscribed();
+    checkSubscription();
+  }
+
+  Future<Map<String, dynamic>?> fetchSubscriptionDetails() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('access_token');
+      if (accessToken == null || accessToken.isEmpty) return null;
+
+      final baseUrl = dotenv.env['BASE_URL'] ?? '';
+      final profileEndpoint = dotenv.env['PROFILE_ENDPOINT'] ?? '/profile/';
+      final response = await http.get(
+        Uri.parse("$baseUrl$profileEndpoint"),
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        profileController.profile.assignAll(data); // update controller
+        return data;
+      } else {
+        log("DEBUG: Failed to fetch profile: ${response.body}");
+        return null;
+      }
+    } catch (e) {
+      log("DEBUG: Exception fetching profile: $e");
+      return null;
+    }
   }
 
   void _loadImage() async {
@@ -33,47 +70,38 @@ class PosterController extends GetxController {
   void setLoadingForButton(bool value) => isLoadingForButton.value = value;
 
   /// Check if user has an active subscription
-  bool isSubscribed() {
-    final profile = profileController.profile;
-    log("DEBUG: profile = $profile"); // log the profile data
-
-    if (profile.isEmpty) {
-      log("DEBUG: profile is empty");
-      return false;
-    }
+  Future<bool> isSubscribed() async {
+    final profile = await fetchSubscriptionDetails();
+    if (profile == null || profile.isEmpty) return false;
 
     final sub = profile['subscription'];
-    log("DEBUG: subscription = $sub"); // log subscription object
-
     if (sub == null) {
-      log("DEBUG: subscription is null");
+      // user has no subscription
+      log("No subscription");
       return false;
     }
 
     final bool isActive = sub['is_active'] ?? false;
     final bool revoked = sub['revoke'] ?? true;
-    log("DEBUG: isActive=$isActive, revoked=$revoked");
-
+    log("Is Active ${sub['is_active']}");
     if (!isActive || revoked) {
-      log("DEBUG: subscription not active or revoked");
+      // subscription is either inactive or revoked
       return false;
     }
 
     final startDate = DateTime.tryParse(sub['start_date'] ?? '');
     final endDate = DateTime.tryParse(sub['end_date'] ?? '');
     final now = DateTime.now();
-    log("DEBUG: startDate=$startDate, endDate=$endDate, now=$now");
 
-    if (startDate == null || endDate == null) {
-      log("DEBUG: startDate or endDate is null");
-      return false;
-    }
+    if (startDate == null || endDate == null) return false;
 
-    // inclusive check
-    bool result = !now.isBefore(startDate) && !now.isAfter(endDate);
-    log("DEBUG: subscription valid = $result");
+    // only valid if now is between start and end (inclusive)
+    return !now.isBefore(startDate) && !now.isAfter(endDate);
+  }
 
-    return result;
+  Future<void> checkSubscription() async {
+    bool subscribed = await isSubscribed();
+    print('Is subscribed: $subscribed');
   }
 
   Future<void> captureAndSaveImage(
@@ -82,15 +110,6 @@ class PosterController extends GetxController {
     GlobalKey key,
     BuildContext context,
   ) async {
-    if (!isSubscribed()) {
-      Get.snackbar(
-        "Not Subscribed",
-        "Your subscription is inactive or expired",
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
     setLoadingForButton(true);
 
     try {
@@ -187,14 +206,6 @@ class PosterController extends GetxController {
     GlobalKey key,
     BuildContext context,
   ) async {
-    if (!isSubscribed()) {
-      Get.snackbar(
-        "Not Subscribed",
-        "Your subscription is inactive or expired",
-      );
-      return;
-    }
-
     setLoadingForButton(true);
 
     try {
@@ -218,5 +229,60 @@ class PosterController extends GetxController {
     } finally {
       setLoadingForButton(false);
     }
+  }
+
+  /// Redirect user to WhatsApp for subscription or renewal
+  Future<void> redirectToWhatsApp(
+    String plan,
+    int price,
+    String duration,
+    BuildContext context,
+  ) async {
+    const adminWhatsAppNumber = '+919496407635';
+
+    final message =
+        'Hello, I want to ${await isSubscribed() ? 'renew' : 'subscribe to'} '
+        'the $plan (₹$price/$duration) for the BrandBuilder app.';
+
+    final encodedMessage = Uri.encodeComponent(message);
+
+    final whatsappUrl =
+        'https://wa.me/$adminWhatsAppNumber?text=$encodedMessage';
+    final uri = Uri.parse(whatsappUrl);
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          _showSnackBar(
+            context,
+            'Could not open WhatsApp. Please ensure WhatsApp is installed.',
+          );
+        }
+      } else {
+        // fallback for some devices
+        final fallbackUri = Uri.parse(
+          'whatsapp://send?phone=$adminWhatsAppNumber&text=$encodedMessage',
+        );
+        if (await canLaunchUrl(fallbackUri)) {
+          await launchUrl(fallbackUri);
+        } else {
+          _showSnackBar(
+            context,
+            'WhatsApp is not installed or cannot be opened.',
+          );
+        }
+      }
+    } catch (e) {
+      _showSnackBar(context, 'Failed to open WhatsApp: $e');
+      log("redirectToWhatsApp error: $e");
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 }

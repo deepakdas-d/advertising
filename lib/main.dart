@@ -1,5 +1,6 @@
 import 'package:advertising/authwrapper.dart';
 import 'package:advertising/binding.dart';
+import 'package:advertising/onboarding.dart';
 import 'package:advertising/view/gallery.dart';
 import 'package:advertising/view/home.dart';
 import 'package:advertising/view/profile.dart';
@@ -9,16 +10,22 @@ import 'package:advertising/view/video_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  runApp(const MyApp());
+
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingCompleted = prefs.getBool('onboardingCompleted') ?? false;
+
+  runApp(MyApp(onboardingCompleted: onboardingCompleted));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool onboardingCompleted;
+  const MyApp({super.key, required this.onboardingCompleted});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
@@ -27,7 +34,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.pink),
       ),
-      home: AuthWrapper(),
+      home: onboardingCompleted ? AuthWrapper() : OnboardingScreen(),
       getPages: [
         GetPage(
           name: '/signup',

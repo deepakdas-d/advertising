@@ -12,6 +12,12 @@ import 'package:advertising/view/home.dart';
 
 class SigninController extends GetxController {
   var isLoading = false.obs;
+  var isFormValid = false.obs;
+
+  // Error message observables
+  var emailError = ''.obs;
+  var passwordError = ''.obs;
+  var errorMessage = ''.obs;
 
   // Text controllers
   final emailController = TextEditingController();
@@ -23,19 +29,61 @@ class SigninController extends GetxController {
   String? accessToken;
   String? refreshToken;
 
+  @override
+  void onInit() {
+    super.onInit();
+    // Add listeners for real-time validation
+    emailController.addListener(() => validateEmail(emailController.text));
+    passwordController.addListener(
+      () => validatePassword(passwordController.text),
+    );
+  }
+
+  // Validation methods
+  void validateEmail(String value) {
+    if (value.isEmpty) {
+      emailError.value = 'Email is required';
+    } else if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+      emailError.value = 'Enter a valid email address';
+    } else {
+      emailError.value = '';
+    }
+    _updateFormValidity();
+  }
+
+  void validatePassword(String value) {
+    if (value.isEmpty) {
+      passwordError.value = 'Password is required';
+    } else if (value.length < 8) {
+      passwordError.value = 'Password must be at least 8 characters';
+    } else {
+      passwordError.value = '';
+    }
+    _updateFormValidity();
+  }
+
+  // Check if entire form is valid
+  void _updateFormValidity() {
+    isFormValid.value =
+        emailError.value.isEmpty &&
+        passwordError.value.isEmpty &&
+        emailController.text.isNotEmpty &&
+        passwordController.text.isNotEmpty;
+  }
+
   /// Signin method
   Future<void> signin() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      Get.snackbar("Error", "Email and Password are required");
-      log("Signin failed: email or password empty");
+    if (!isFormValid.value) {
+      errorMessage.value = 'Please fix all form errors before submitting';
       return;
     }
 
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
     try {
       isLoading.value = true;
+      errorMessage.value = '';
 
       final baseUrl = dotenv.env['BASE_URL']!;
       final endpoint = dotenv.env['SIGNIN_ENDPOINT']!;
@@ -74,18 +122,37 @@ class SigninController extends GetxController {
         final savedToken = prefs.getString('access_token');
         log("Saved access token in SharedPreferences: $savedToken");
 
-        Get.snackbar("✅ Success", "Login successful!");
+        Get.snackbar(
+          "✅ Success",
+          "Login successful!",
+          backgroundColor: Colors.green.withOpacity(0.9),
+          colorText: Colors.white,
+        );
         emailController.clear();
         passwordController.clear();
+        emailError.value = '';
+        passwordError.value = '';
+        errorMessage.value = '';
 
         Get.offAll(() => Home());
       } else {
-        log("Login failed with status: ${response.statusCode}");
-        Get.snackbar("❌ Error", "Login failed: ${response.body}");
+        errorMessage.value = 'Login failed: ${response.body}';
+        Get.snackbar(
+          "❌ Error",
+          "Login failed: ${response.body}",
+          backgroundColor: Colors.red.withOpacity(0.9),
+          colorText: Colors.white,
+        );
       }
     } catch (e) {
+      errorMessage.value = 'Something went wrong: $e';
+      Get.snackbar(
+        "⚠️ Error",
+        "Something went wrong: $e",
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
       log("Signin error: $e");
-      Get.snackbar("Error", e.toString());
     } finally {
       isLoading.value = false;
       log("Signin process completed. isLoading: ${isLoading.value}");
@@ -142,5 +209,12 @@ class SigninController extends GetxController {
     refreshToken = null;
     log("Tokens cleared from storage");
     Get.offAll(() => Signin());
+  }
+
+  @override
+  void onClose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.onClose();
   }
 }

@@ -1,6 +1,7 @@
 import 'package:advertising/authwrapper.dart';
 import 'package:advertising/binding.dart';
 import 'package:advertising/onboarding.dart';
+import 'package:advertising/theme.dart';
 import 'package:advertising/view/gallery.dart';
 import 'package:advertising/view/home.dart';
 import 'package:advertising/view/profile.dart';
@@ -31,9 +32,9 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.pink),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       home: onboardingCompleted ? AuthWrapper() : OnboardingScreen(),
       getPages: [
         GetPage(
